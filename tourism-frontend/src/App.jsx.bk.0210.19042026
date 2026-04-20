@@ -1,0 +1,255 @@
+import { useEffect, useState } from 'react';
+import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './index.css';
+
+// 1. Khai báo URL của Backend để dùng chung
+const BASE_URL = "http://127.0.0.1:8000";
+
+// --- COMPONENT TRANG CHI TIẾT TỈNH THÀNH ---
+function ProvinceDetail() {
+  const { id } = useParams();
+  const [locations, setLocations] = useState([]);
+  const [provinceName, setProvinceName] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    axios.get(`${BASE_URL}/api/provinces/${id}/locations`)
+      .then(res => {
+        setLocations(res.data);
+        if (res.data.length > 0 && res.data[0].province) {
+          setProvinceName(res.data[0].province.name);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) return <div className="flex justify-center items-center min-h-screen text-blue-600 font-bold">Đang tải dữ liệu...</div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="bg-blue-700 text-white py-12 px-6 mb-8 shadow-inner">
+        <div className="max-w-6xl mx-auto">
+          <Link to="/" className="text-blue-200 hover:text-white mb-4 inline-block transition-colors">← Quay lại danh sách</Link>
+          <h2 className="text-4xl font-bold">Khám phá {provinceName || "Địa phương"}</h2>
+          <p className="mt-2 text-blue-100">Tìm thấy {locations.length} điểm đến hấp dẫn dành cho bạn.</p>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6">
+        {locations.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl shadow">
+            <p className="text-gray-500 text-lg">Chưa có dữ liệu địa điểm cho khu vực này.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {locations.map(loc => (
+              <div key={loc.id} className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all overflow-hidden border border-gray-100">
+                <div className="flex flex-col sm:flex-row">
+                  {/* ĐÃ SỬA: Thêm thẻ <img mở đầu và đóng thẻ đúng cách */}
+                  <img 
+                    src={`${BASE_URL}/storage/images/${loc.image_thumbnail}`} 
+                    alt={loc.name}
+                    className="w-full sm:w-48 h-48 object-cover"
+                    onError={(e) => {
+                      console.log("Lỗi tải ảnh địa điểm:", loc.image_thumbnail); 
+                      e.target.src = 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=500';
+                    }} 
+                  />
+                  <div className="p-6 flex-1">
+                    <span className="inline-block px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded-full mb-2">
+                      {loc.category?.name || "Du lịch"}
+                    </span>
+                    <Link to={`/location/${loc.id}`} className="block group">
+                      <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                        {loc.name}
+                      </h3>
+                    </Link>
+                    <p className="text-gray-500 text-xs mt-1 flex items-center">
+                      <span className="mr-1">📍</span> {loc.address}
+                    </p>
+                    <p className="mt-3 text-gray-600 text-sm line-clamp-2 italic">"{loc.content}"</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- COMPONENT TRANG CHỦ ---
+function Home({ provinces }) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredProvinces = provinces.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <div className="bg-blue-900 py-20 px-6 text-center text-white">
+        <h1 className="text-5xl font-black mb-4 tracking-tight uppercase">Tra cứu du lịch theo địa phương</h1>
+        <p className="text-blue-100 max-w-2xl mx-auto mb-8">
+          Khám phá vẻ đẹp tiềm ẩn của 34 tỉnh thành Việt Nam.
+        </p>
+        
+        <div className="max-w-lg mx-auto relative">
+          <input 
+            type="text" 
+            placeholder="Bạn muốn đi đâu? (Hà Nội, Lâm Đồng...)" 
+            className="w-full px-8 py-4 rounded-full text-gray-900 focus:outline-none shadow-2xl"
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+          {filteredProvinces.map(p => (
+            <Link 
+              to={`/province/${p.id}`} 
+              key={p.id} 
+              className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
+            >
+              <div className="relative h-64 overflow-hidden">
+                <img 
+                  src={`${BASE_URL}/storage/images/provinces/${p.image}`} 
+                  alt={p.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    console.log("Lỗi tải ảnh tỉnh:", p.image);
+                    e.target.src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div className="absolute bottom-4 left-6 text-left">
+                  <h3 className="text-2xl font-bold text-white uppercase tracking-wider">{p.name}</h3>
+                  <p className="text-blue-300 text-sm font-medium">{p.locations_count || 0} địa điểm du lịch</p>
+                </div>
+              </div>
+
+              <div className="p-6 text-left">
+                <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-4">
+                  {p.description || `Khám phá những điểm đến tuyệt vời và văn hóa đặc sắc tại ${p.name}.`}
+                </p>
+                <div className="flex items-center text-blue-600 font-bold text-xs tracking-widest">
+                  KHÁM PHÁ NGAY →
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+        
+        {filteredProvinces.length === 0 && (
+          <p className="text-center text-gray-400 mt-10">Không tìm thấy tỉnh thành nào phù hợp.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LocationDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    axios.get(`${BASE_URL}/api/locations/${id}`)
+      .then(res => {
+        setLocation(res.data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Lỗi lấy chi tiết địa điểm:", err);
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) return <div className="text-center py-20">Đang tải chi tiết địa điểm...</div>;
+  if (!location) return <div className="text-center py-20">Không tìm thấy dữ liệu địa điểm.</div>;
+
+  return (
+    <div className="min-h-screen bg-white pb-20">
+      {/* Nút quay lại */}
+      <button 
+        onClick={() => navigate(-1)}
+        className="fixed top-6 left-6 z-10 bg-white/90 p-3 rounded-full shadow-xl hover:bg-blue-600 hover:text-white transition-all"
+      >
+        ← Quay lại
+      </button>
+
+      {/* Hero Image */}
+      <div className="h-[60vh] relative shadow-2xl">
+        <img 
+          src={`${BASE_URL}/storage/images/${location.image_thumbnail}`} 
+          className="w-full h-full object-cover"
+          alt={location.name}
+          onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1500'}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-center text-white w-full px-6">
+          <p className="uppercase tracking-[0.3em] text-sm mb-2 text-blue-300 font-bold">
+            {location.category?.name} | {location.province?.name}
+          </p>
+          <h1 className="text-5xl font-black uppercase italic drop-shadow-lg">{location.name}</h1>
+        </div>
+      </div>
+
+      {/* Nội dung chi tiết */}
+      <div className="max-w-4xl mx-auto px-6 py-16">
+        <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100 text-gray-500">
+           <div className="flex items-center gap-2">
+              <span className="text-2xl">📍</span>
+              <span className="font-medium text-lg">{location.address}</span>
+           </div>
+        </div>
+
+        <div className="prose prose-xl max-w-none">
+          <p className="text-2xl leading-relaxed text-gray-700 first-letter:text-7xl first-letter:font-bold first-letter:text-blue-600 first-letter:mr-3 first-letter:float-left">
+            {location.content}
+          </p>
+          
+          <div className="mt-12 p-8 bg-blue-50 rounded-3xl border border-blue-100">
+            <h4 className="text-blue-900 font-bold mb-2">Thông tin tham quan:</h4>
+            <p className="text-blue-800/80">
+               Địa điểm này thuộc tỉnh {location.province?.name}. Du khách có thể ghé thăm vào bất kỳ thời điểm nào trong năm để tận hưởng vẻ đẹp của {location.name}.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN APP COMPONENT ---
+function App() {
+  const [provinces, setProvinces] = useState([]);
+
+  useEffect(() => {
+    axios.get(`${BASE_URL}/api/provinces`)
+      .then(res => setProvinces(res.data))
+      .catch(err => console.error("Lỗi kết nối Backend:", err));
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home provinces={provinces} />} />
+      <Route path="/province/:id" element={<ProvinceDetail />} />
+      <Route path="/location/:id" element={<LocationDetail />} />
+      
+    </Routes>
+  );
+}
+
+export default App;

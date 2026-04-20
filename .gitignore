@@ -1,0 +1,8 @@
+# Root .gitignore
+tourism-backend/vendor/
+tourism-backend/.env
+tourism-backend/storage/*.key
+
+tourism-frontend/node_modules/
+tourism-frontend/dist/
+tourism-frontend/.env.local
