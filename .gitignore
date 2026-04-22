@@ -1,8 +1,20 @@
-# Root .gitignore
-tourism-backend/vendor/
-tourism-backend/.env
-tourism-backend/storage/*.key
+# --- BACKEND (Laravel) ---
+ tourism-backend/vendor/
+ tourism-backend/.env
+ tourism-backend/storage/*.key
+ tourism-backend/public/storage
+ tourism-backend/.phpunit.result.cache
+ tourism-backend/composer.lock (tùy chọn, thường nên giữ nếu làm team)
 
-tourism-frontend/node_modules/
-tourism-frontend/dist/
-tourism-frontend/.env.local
+# --- FRONTEND (React/Vite) ---
+ tourism-frontend/node_modules/
+ tourism-frontend/dist/
+ tourism-frontend/.env
+ tourism-frontend/.env.local
+ tourism-frontend/npm-debug.log*
+
+# --- HỆ ĐIỀU HÀNH & IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
