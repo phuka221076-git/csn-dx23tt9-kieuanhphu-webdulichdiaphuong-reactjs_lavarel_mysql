@@ -190,8 +190,8 @@ function Home({ provinces }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-blue-900 py-28 px-6 text-center text-white relative">
-        <h1 className="text-6xl font-black mb-6 tracking-tighter uppercase italic">VinaTour Explorer</h1>
-        <p className="text-blue-200 mb-10 text-xl font-light">Tìm kiếm và khám phá vẻ đẹp của 63 tỉnh thành Việt Nam</p>
+        <h1 className="text-6xl font-black mb-6 tracking-tighter uppercase italic">Tra cứu du lịch địa phương</h1>
+        <p className="text-blue-200 mb-10 text-xl font-light">Tìm kiếm và khám phá vẻ đẹp của 34 tỉnh thành Việt Nam</p>
         <div className="max-w-2xl mx-auto">
           <input 
             type="text" 
