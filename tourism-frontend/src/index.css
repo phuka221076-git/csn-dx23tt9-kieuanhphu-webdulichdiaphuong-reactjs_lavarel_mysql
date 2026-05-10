@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+
+/* ĐẶT Ở ĐẦU FILE CSS CỦA CON */
+
+/* 1. Ép bản đồ phải có chiều cao */
+.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 400px; /* Quan trọng: Phải có chiều cao tối thiểu */
+    z-index: 1;
+}
+
+/* 2. Fix lỗi vỡ ảnh bản đồ do xung đột với Tailwind */
+.leaflet-container img {
+    max-width: none !important;
+    max-height: none !important;
+}
+
+/* 3. Đảm bảo các mảnh bản đồ hiện ra */
+.leaflet-tile-pane {
+    opacity: 1 !important;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -162,4 +184,16 @@ code {
 .custom-article-style th {
     background-color: #b32d2e;
     color: white;
+}
+
+/* Thêm vào cuối file index.css */
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+    z-index: 1; /* Đảm bảo nó nổi lên trên */
+}
+
+/* Fix lỗi icon marker không hiện hoặc bị lệch */
+.leaflet-marker-icon, .leaflet-marker-shadow {
+    display: block !important;
 }

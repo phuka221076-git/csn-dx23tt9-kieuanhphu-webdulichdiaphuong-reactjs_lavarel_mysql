@@ -19,4 +19,14 @@ class LocationController extends Controller
 
         return response()->json($location);
     }
+    
+    public function getByProvince($province_id)
+    {
+        // Thêm with('province') để lấy luôn thông tin tên tỉnh
+        $locations = Location::where('province_id', $province_id)
+                            ->with('province') 
+                            ->get();
+        return response()->json($locations);
+    }
+    
 }

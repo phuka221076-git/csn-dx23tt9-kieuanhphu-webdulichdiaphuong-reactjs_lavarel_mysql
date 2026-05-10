@@ -11,14 +11,11 @@ class Location extends Model
     use HasFactory;
 
     // Phải có dòng này để Seeder có thể chạy lệnh create()
-    protected $fillable = [
-        'province_id', 
-        'category_id', 
-        'name', 
-        'address', 
-        'content', 
-        'image_thumbnail', 
-        'is_featured'
+    protected $fillable = ['province_id', 'category_id', 'name', 'address', 'content', 'image_thumbnail', 'latitude', 'longitude', 'is_featured'];
+
+    // THÊM ĐOẠN NÀY VÀO MODEL
+    protected $casts = [
+        'is_featured' => 'integer',
     ];
 
     // Khai báo quan hệ để React có thể lấy tên tỉnh/danh mục
@@ -29,5 +26,10 @@ class Location extends Model
     public function category() {
         return $this->belongsTo(Category::class);
     }
-
+    // app/Models/Location.php
+    public function reviews()
+    {
+        // Phải là Review::class (không có s, viết hoa R)
+        return $this->hasMany(Review::class, 'location_id');
+    }
 }
