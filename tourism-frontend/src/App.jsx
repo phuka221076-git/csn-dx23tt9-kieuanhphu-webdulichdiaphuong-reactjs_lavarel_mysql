@@ -11,7 +11,7 @@ import ProvinceManager from './pages/admin/ProvinceManager';
 import Login from './pages/Login';
 import Register from './pages/Register'; 
 import ReviewManager from './pages/admin/ReviewManager';
-//import LocationCreate from './pages/admin/LocationCreate';
+import { removeAccents } from './utils/stringUtils'; // Đã có hàm này
 
 const BASE_URL = "http://127.0.0.1:8000";
 
@@ -52,69 +52,61 @@ function Navbar({ user, setUser }) {
   );
 }
 
-// --- 3. CHI TIẾT ĐỊA ĐIỂM (ĐÃ THÊM MỤC REVIEWS) ---
+// --- 3. CHI TIẾT ĐỊA ĐIỂM ---
 function LocationDetail({ user, setUser }) {
   const { id } = useParams();
   const [loc, setLoc] = useState(null);
-  const [error, setError] = useState(null); // Thêm state để bắt lỗi
-  const [newComment, setNewComment] = useState(""); // State lưu nội dung nhập
-  const [rating, setRating] = useState(5); // State lưu số sao
+  const [error, setError] = useState(null);
+  const [newComment, setNewComment] = useState("");
+  const [rating, setRating] = useState(5);
 
   useEffect(() => {
-    // Reset lại state khi đổi ID
     setLoc(null);
     setError(null);
 
     axios.get(`${BASE_URL}/api/locations/${id}`)
       .then(res => {
-        console.log("Dữ liệu nhận được:", res.data);
         setLoc(res.data);
       })
       .catch(e => {
-        console.error("Lỗi API chi tiết:", e.response?.data || e.message);
         setError(e.response?.data?.message || "Lỗi server (500) hoặc không tìm thấy địa điểm.");
       });
   }, [id]);
 
-  // Hàm gửi bình luận
   const handleSubmitReview = async () => {
-      const token = localStorage.getItem('token');
-    console.log("Token hiện tại là:", token); // <-- KIỂM TRA DÒNG NÀY Ở TAB CONSOLE
+    const token = localStorage.getItem('token');
     if (!token) {
-        alert("Không tìm thấy token, con đăng nhập lại nhé!");
+        alert("Vui lòng đăng nhập lại!");
         return;
     }
-      if (!user) {
-        alert("Bạn phải đăng nhập mới bình luận được nhé!");
+    if (!user) {
+        alert("Bạn phải đăng nhập mới bình luận được!");
         return;
-      }
+    }
       
-      // 2. Chuẩn bị dữ liệu gửi đi (phải khớp với tên cột trong DB)
-      const reviewData = {
-          location_id: id,
-          user_id: user.id,
-          rating: rating,
-          comment: newComment // Nếu trong DB con đặt là 'content' thì sửa lại ở đây
-      };
+    const reviewData = {
+        location_id: id,
+        user_id: user.id,
+        rating: rating,
+        comment: newComment 
+    };
 
-      try {
-          const res = await axios.post(`${BASE_URL}/api/reviews`, reviewData);
-          
-          // 3. Cập nhật state để bình luận hiện ra ngay không cần F5
-          setLoc({
-              ...loc,
-              reviews: [res.data, ...(loc.reviews || [])]
-          });
-          setNewComment(""); // Xóa trắng ô nhập sau khi gửi thành công
-          alert("Gửi bình luận thành công rồi con!");
-      } catch (e) {
-          // 4. Nếu lỗi, in lỗi ra console để má con mình cùng xem
-          console.error("Lỗi gửi bình luận:", e.response?.data);
-          alert("Lỗi rồi: " + (e.response?.data?.message || e.message));
-      }
+    try {
+        const res = await axios.post(`${BASE_URL}/api/reviews`, reviewData, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setLoc({
+            ...loc,
+            reviews: [res.data, ...(loc.reviews || [])]
+        });
+        setNewComment("");
+        alert("Gửi bình luận thành công!");
+    } catch (e) {
+        alert("Lỗi rồi: " + (e.response?.data?.message || e.message));
+    }
   };
 
-  // Nếu có lỗi, hiện thông báo lỗi thay vì cứ "Đang tải"
   if (error) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
       <h2 className="text-2xl font-bold text-red-600 mb-4">Ối! Có lỗi xảy ra</h2>
@@ -133,7 +125,6 @@ function LocationDetail({ user, setUser }) {
     <div className="min-h-screen bg-white">
       <Navbar user={user} setUser={setUser} />
       
-      {/* Header Image */}
       <div className="relative h-[60vh] overflow-hidden mt-16">
         <img 
           src={loc?.image_thumbnail ? `${BASE_URL}/storage/images/${loc.image_thumbnail}` : 'https://via.placeholder.com/1200x600'} 
@@ -148,17 +139,14 @@ function LocationDetail({ user, setUser }) {
       </div>
 
       <div className="max-w-4xl mx-auto py-10 px-8">
-        {/* Nội dung bài viết */}
         <div 
           className="prose prose-lg font-medium text-gray-700 leading-relaxed mb-20" 
           dangerouslySetInnerHTML={{ __html: loc?.content || "Chưa có nội dung." }} 
         />
         
-        {/* MỤC ĐÁNH GIÁ - REVIEWS (Sửa đúng theo bảng reviews) */}
         <div className="max-w-4xl mx-auto px-8 pb-32">
-          {/* FORM NHẬP BÌNH LUẬN */}
           <div className="bg-blue-50 p-8 rounded-3xl mb-12 shadow-inner">
-            <h4 className="text-xl font-black italic uppercase mb-4 text-blue-900">Viết đánh giá của con</h4>
+            <h4 className="text-xl font-black italic uppercase mb-4 text-blue-900">Viết đánh giá của bạn</h4>
             <div className="flex gap-2 mb-4">
               {[1, 2, 3, 4, 5].map(star => (
                 <button key={star} onClick={() => setRating(star)} className="text-2xl">
@@ -168,7 +156,7 @@ function LocationDetail({ user, setUser }) {
             </div>
             <textarea 
               className="w-full p-4 rounded-2xl border-none outline-none focus:ring-4 ring-blue-200 text-gray-700 mb-4"
-              placeholder="Cảm nhận của con về nơi này..."
+              placeholder="Cảm nhận của bạn về nơi này..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
@@ -180,16 +168,23 @@ function LocationDetail({ user, setUser }) {
             </button>
           </div>
 
-          {/* DANH SÁCH BÌNH LUẬN (Code cũ của con) */}
           <h3 className="text-3xl font-black italic uppercase mb-8">Đánh giá từ cộng đồng</h3>
-          {/* ... map loc.reviews ra như cũ ... */}
+          {loc.reviews?.map((r, i) => (
+             <div key={i} className="mb-6 p-4 border-b border-gray-100">
+                <div className="flex justify-between items-center mb-2">
+                    <span className="font-bold text-blue-900 uppercase text-xs">{r.user?.name || "Ẩn danh"}</span>
+                    <span className="text-yellow-500">{'⭐'.repeat(r.rating)}</span>
+                </div>
+                <p className="text-gray-600 italic">"{r.comment}"</p>
+             </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// --- 4. CHI TIẾT TỈNH (ĐÃ FIX LỖI LOOP DÒNG 96) ---
+// --- 4. CHI TIẾT TỈNH ---
 function ProvinceDetail({ user, setUser }) {
   const { id } = useParams();
   const [locations, setLocations] = useState([]);
@@ -197,17 +192,15 @@ function ProvinceDetail({ user, setUser }) {
 
   useEffect(() => {
     if (id) { 
-        // Lấy thông tin tỉnh
         axios.get(`${BASE_URL}/api/provinces/${id}`)
           .then(res => setProvince(res.data))
           .catch(e => console.error("Lỗi lấy tỉnh:", e));
 
-        // Lấy danh sách địa điểm của tỉnh
         axios.get(`${BASE_URL}/api/provinces/${id}/locations`)
           .then(res => setLocations(res.data))
           .catch(error => console.error("Lỗi Server (500):", error.response?.data));
     }
-  }, [id]); // Chạy lại khi id thay đổi
+  }, [id]);
 
   return (
     <div className="min-h-screen bg-white pt-24">
@@ -230,10 +223,16 @@ function ProvinceDetail({ user, setUser }) {
   );
 }
 
-// --- 5. TRANG CHỦ ---
+// --- 5. TRANG CHỦ (FIX TÌM KIẾM KHÔNG DẤU TẠI ĐÂY) ---
 function Home({ provinces, user, setUser }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const filtered = provinces.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // FIX: Dùng removeAccents để lọc không dấu
+  const filtered = provinces.filter(p => {
+      const search = removeAccents(searchTerm);
+      const provinceName = removeAccents(p.name || "");
+      return provinceName.includes(search);
+  });
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -245,7 +244,7 @@ function Home({ provinces, user, setUser }) {
         <div className="max-w-xl mx-auto px-6">
           <input 
             type="text" 
-            placeholder="Tìm kiếm điểm đến của bạn..." 
+            placeholder="Tìm kiếm điểm đến của bạn... (vđ: tra vinh)" 
             className="w-full px-10 py-5 rounded-2xl text-gray-900 outline-none shadow-2xl text-xl font-bold focus:ring-8 ring-blue-500/20 transition-all"
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -292,7 +291,7 @@ function App() {
         <Route path="locations" element={<LocationManager />} />
         <Route path="users" element={<UserManager />} />
         <Route path="provinces" element={<ProvinceManager />} />
-        <Route path="reviews" element={<ReviewManager />} /> {/* THÊM DÒNG NÀY */}
+        <Route path="reviews" element={<ReviewManager />} />
       </Route>
       <Route path="*" element={<div className="min-h-screen flex items-center justify-center font-black text-9xl italic text-gray-100 uppercase">404</div>} />
     </Routes>

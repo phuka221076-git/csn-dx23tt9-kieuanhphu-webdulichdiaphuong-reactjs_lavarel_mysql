@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+// 1. IMPORT HÀM REMOVEACCENTS
+import { removeAccents } from '../../utils/stringUtils'; 
 
 const BASE_URL = 'http://localhost:8000';
 
@@ -12,7 +14,7 @@ const ProvinceManager = () => {
     // Tìm kiếm và Phân trang
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8; // Số lượng tỉnh hiển thị trên mỗi trang
+    const itemsPerPage = 8; 
 
     const fetchProvinces = () => {
         axios.get(`${BASE_URL}/api/admin/provinces`)
@@ -24,30 +26,30 @@ const ProvinceManager = () => {
         fetchProvinces();
     }, []);
 
-    // --- XỬ LÝ LỌC VÀ PHÂN TRANG ---
-    const filteredProvinces = provinces.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // --- XỬ LÝ LỌC KHÔNG DẤU (ĐÃ FIX TẠI ĐÂY) ---
+    const filteredProvinces = provinces.filter(p => {
+        const search = removeAccents(searchTerm); // Chuẩn hóa từ khóa nhập
+        const provinceName = removeAccents(p.name || ""); // Chuẩn hóa tên tỉnh từ DB
+        return provinceName.includes(search);
+    });
 
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredProvinces.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredProvinces.length / itemsPerPage);
 
-    // --- CÁC HÀM THAO TÁC ---
+    // --- CÁC HÀM THAO TÁC (Giữ nguyên logic của ông giáo) ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
         try {
             if (editingProvince) {
-                // Lệnh Sửa
                 await axios.put(`${BASE_URL}/api/admin/provinces/${editingProvince.id}`, 
                     { name }, 
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
                 alert('Cập nhật thành công!');
             } else {
-                // Lệnh Thêm mới
                 await axios.post(`${BASE_URL}/api/admin/provinces`, 
                     { name }, 
                     { headers: { Authorization: `Bearer ${token}` } }
@@ -116,8 +118,9 @@ const ProvinceManager = () => {
                 <span className="px-4 opacity-30">🔍</span>
                 <input 
                     type="text" 
-                    placeholder="Gõ tên tỉnh để tìm nhanh..." 
+                    placeholder="Gõ tên tỉnh để tìm nhanh... (vđ: tra vinh)" 
                     className="w-full py-3 rounded-xl outline-none text-sm font-bold"
+                    value={searchTerm} // Thêm value để đồng bộ
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 />
             </div>
