@@ -103,7 +103,20 @@ class LocationController extends Controller
         $locations = Location::where('province_id', $id)->get();
         return response()->json($locations);
     }
+    public function search(Request $request)
+    {
+        $keyword = $request->input('q');
+        // Chuyển từ khóa sang không dấu để tìm kiếm chính xác hơn
+        $keywordSearch = $this->vn_to_str($keyword); 
 
+        $locations = Location::with(['province']) // Lấy kèm thông tin tỉnh
+            ->where('name', 'LIKE', "%{$keyword}%")
+            ->orWhere('name_search', 'LIKE', "%{$keywordSearch}%")
+            ->limit(8) // Giới hạn để ô tìm kiếm gọn gàng
+            ->get();
+
+        return response()->json($locations);
+    }
     // HÀM QUAN TRỌNG ĐỂ THÔNG DỮ LIỆU TÌM KIẾM
     private function vn_to_str($str) {
         $unicode = [

@@ -35,10 +35,10 @@ const LocationDetail = () => {
     // State cho Form đánh giá
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
-    const [selectedImages, setSelectedImages] = useState([]); // --- THÊM MỚI: State lưu ảnh ---
+    const [selectedImages, setSelectedImages] = useState([]);
     const [submitting, setSubmitting] = useState(false);
 
-    // Lấy thông tin user từ localStorage
+    // Lấy thông tin user
     const userRaw = localStorage.getItem('user');
     const userObj = userRaw ? JSON.parse(userRaw) : null;
     const userId = userObj?.id; 
@@ -64,14 +64,12 @@ const LocationDetail = () => {
         fetchData();
     }, [fetchData]);
 
-    // --- THÊM MỚI: Hàm xử lý chọn ảnh ---
     const handleImageChange = (e) => {
         if (e.target.files) {
             setSelectedImages([...e.target.files]);
         }
     };
 
-    // Hàm gửi đánh giá
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         if (!comment.trim()) {
@@ -80,15 +78,12 @@ const LocationDetail = () => {
         }
 
         setSubmitting(true);
-
-        // --- THAY ĐỔI: Sử dụng FormData để gửi kèm file ---
         const formData = new FormData();
         formData.append('location_id', id);
         formData.append('user_id', userId);
         formData.append('rating', rating);
         formData.append('comment', comment);
         
-        // Append từng file ảnh vào mảng images[]
         selectedImages.forEach((image) => {
             formData.append('images[]', image);
         });
@@ -97,13 +92,13 @@ const LocationDetail = () => {
             await axios.post(`${BASE_URL}/api/reviews`, formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data' // Bắt buộc khi gửi file
+                    'Content-Type': 'multipart/form-data'
                 }
             });
             
             setComment(""); 
             setRating(5);   
-            setSelectedImages([]); // Xóa danh sách ảnh đã chọn
+            setSelectedImages([]); 
             fetchData();    
             alert("Cảm ơn bạn đã đánh giá!");
         } catch (error) {
@@ -122,21 +117,28 @@ const LocationDetail = () => {
 
     return (
         <div className="bg-white min-h-screen">
-            {/* Banner chính */}
-            <div className="relative h-[60vh] w-full overflow-hidden">
+            {/* Banner chính với Tỉnh nổi bật */}
+            <div className="relative h-[65vh] w-full overflow-hidden">
                 <img 
                     src={renderImage(location.image_thumbnail)} 
                     alt={location.name}
                     className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <div className="text-center text-white px-4">
-                        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">
+                        <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4 drop-shadow-2xl">
                             {location.name}
                         </h1>
-                        <p className="text-lg md:text-xl opacity-90">
-                            {location.province?.name} — {location.category?.name}
-                        </p>
+                        <div className="flex flex-col items-center gap-3">
+                            {/* Hiển thị Tỉnh như một Badge nổi trên nền */}
+                            <span className="bg-emerald-600 text-white px-6 py-2 rounded-full text-lg font-bold shadow-xl border border-emerald-400">
+                                <i className="fas fa-map-marker-alt mr-2"></i>
+                                {location.province?.name}
+                            </span>
+                            <span className="text-sm opacity-80 uppercase tracking-[0.3em] font-medium">
+                                {location.category?.name}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -145,18 +147,20 @@ const LocationDetail = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                     
                     <div className="lg:col-span-8">
+                        {/* Phần Nội dung chi tiết - Đã thu nhỏ chữ */}
                         <div className="prose max-w-none">
                             {location.contents && location.contents.length > 0 ? (
                                 <div className="space-y-16">
                                     {location.contents.map((item, index) => (
                                         <div key={index} className="group">
-                                            <div className="flex items-center mb-6">
-                                                <span className="w-12 h-[2px] bg-emerald-500 mr-4"></span>
-                                                <h3 className="text-emerald-600 font-black text-sm uppercase tracking-[0.2em]">
+                                            <div className="flex items-center mb-4">
+                                                <span className="w-10 h-[2px] bg-emerald-500 mr-4"></span>
+                                                <h3 className="text-emerald-600 font-black text-xs uppercase tracking-[0.2em]">
                                                     {item.info_type?.name}
                                                 </h3>
                                             </div>
-                                            <div className="text-gray-700 leading-relaxed text-lg text-justify whitespace-pre-line pl-0 md:pl-16">
+                                            {/* text-base và leading-loose giúp chữ nhỏ nhưng thoáng */}
+                                            <div className="text-slate-600 leading-loose text-base text-justify whitespace-pre-line pl-0 md:pl-14">
                                                 {item.content}
                                             </div>
                                         </div>
@@ -174,16 +178,14 @@ const LocationDetail = () => {
                             </h2>
 
                             {userId ? (
-                                <form onSubmit={handleSubmitReview} className="mb-16 bg-emerald-50 p-8 rounded-3xl border border-emerald-100 shadow-sm">
-                                    <h4 className="font-bold text-emerald-900 mb-4 text-lg">Chào {userName}, trải nghiệm của bạn thế nào?</h4>
+                                <form onSubmit={handleSubmitReview} className="mb-16 bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm">
+                                    <h4 className="font-bold text-slate-800 mb-4 text-lg">Chào {userName}, trải nghiệm của bạn thế nào?</h4>
                                     
                                     <div className="flex mb-4">
                                         {[1, 2, 3, 4, 5].map((s) => (
                                             <button 
-                                                key={s} 
-                                                type="button" 
-                                                onClick={() => setRating(s)}
-                                                className={`text-3xl mr-1 transition-transform hover:scale-125 ${s <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                                key={s} type="button" onClick={() => setRating(s)}
+                                                className={`text-3xl mr-1 transition-all ${s <= rating ? 'text-yellow-400 scale-110' : 'text-gray-300'}`}
                                             >
                                                 ★
                                             </button>
@@ -191,31 +193,23 @@ const LocationDetail = () => {
                                     </div>
 
                                     <textarea 
-                                        className="w-full p-5 rounded-2xl border-none ring-1 ring-emerald-200 focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700 shadow-inner mb-4"
+                                        className="w-full p-5 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-gray-700 mb-4"
                                         rows="4"
-                                        placeholder="Chia sẻ cảm nhận của bạn về con người, cảnh vật hay món ăn tại đây..."
+                                        placeholder="Chia sẻ cảm nhận thực tế của bạn..."
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
                                     ></textarea>
 
-                                    {/* --- THÊM MỚI: UI Input chọn nhiều ảnh --- */}
                                     <div className="mb-6">
-                                        <label className="block text-emerald-800 font-bold mb-2 text-sm uppercase tracking-wide">Đính kèm ảnh thực tế:</label>
+                                        <label className="block text-slate-700 font-bold mb-2 text-sm">Đính kèm ảnh thực tế:</label>
                                         <input 
-                                            type="file" 
-                                            multiple 
-                                            accept="image/*" 
-                                            onChange={handleImageChange}
-                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 cursor-pointer"
+                                            type="file" multiple accept="image/*" onChange={handleImageChange}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
                                         />
-                                        {selectedImages.length > 0 && (
-                                            <p className="mt-2 text-xs text-emerald-600 font-medium">Đã chọn {selectedImages.length} ảnh</p>
-                                        )}
                                     </div>
 
                                     <button 
-                                        type="submit"
-                                        disabled={submitting}
+                                        type="submit" disabled={submitting}
                                         className="bg-emerald-600 text-white px-10 py-3 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-lg disabled:bg-gray-400"
                                     >
                                         {submitting ? "Đang gửi..." : "Đăng đánh giá"}
@@ -223,50 +217,52 @@ const LocationDetail = () => {
                                 </form>
                             ) : (
                                 <div className="mb-16 p-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
-                                    <p className="text-gray-500 text-lg">
-                                        Vui lòng <Link to="/login" className="text-emerald-600 font-bold underline">Đăng nhập</Link> để chia sẻ đánh giá của bạn.
+                                    <p className="text-gray-500">
+                                        Vui lòng <Link to="/login" className="text-emerald-600 font-bold underline">Đăng nhập</Link> để chia sẻ đánh giá.
                                     </p>
                                 </div>
                             )}
 
-                            <div className="space-y-8">
-                                {reviews.length > 0 ? (
-                                    reviews.map((rev) => (
-                                        <div key={rev.id} className="border-b border-gray-100 pb-8 last:border-0">
-                                            <div className="flex justify-between items-start mb-3">
+                            <div className="space-y-12">
+                                {reviews.map((rev) => (
+                                    <div key={rev.id} className="pb-8 border-b border-slate-100 last:border-0">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold uppercase">
+                                                    {(rev.user?.name || "D").charAt(0)}
+                                                </div>
                                                 <div>
-                                                    <span className="font-bold text-gray-900 mr-3">{rev.user?.name || `Du khách #${rev.user_id}`}</span>
-                                                    <span className="text-yellow-400">{'★'.repeat(rev.rating)}</span>
+                                                    <p className="font-bold text-slate-900">{rev.user?.name || `Du khách`}</p>
+                                                    <span className="text-yellow-400 text-sm">{'★'.repeat(rev.rating)}</span>
                                                 </div>
-                                                <span className="text-gray-400 text-sm italic">
-                                                    {new Date(rev.created_at).toLocaleDateString('vi-VN')}
-                                                </span>
                                             </div>
-                                            <p className="text-gray-600 leading-relaxed italic mb-4">"{rev.comment}"</p>
-
-                                            {/* --- THÊM MỚI: Hiển thị mảng ảnh của bình luận --- */}
-                                            {rev.images && (
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {JSON.parse(rev.images).map((img, idx) => (
-                                                        <img 
-                                                            key={idx}
-                                                            src={`${BASE_URL}/storage/${img}`} 
-                                                            alt="review"
-                                                            className="w-24 h-24 object-cover rounded-xl border border-gray-100 shadow-sm hover:scale-105 transition-transform cursor-pointer"
-                                                            onClick={() => window.open(`${BASE_URL}/storage/${img}`, '_blank')}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
+                                            <span className="text-slate-400 text-xs">
+                                                {new Date(rev.created_at).toLocaleDateString('vi-VN')}
+                                            </span>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-gray-400 text-center py-10">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
-                                )}
+                                        <p className="text-slate-600 leading-relaxed mb-4">{rev.comment}</p>
+
+                                        {/* Hiển thị mảng ảnh Review */}
+                                        {rev.images && (
+                                            <div className="flex gap-3 flex-wrap">
+                                                {JSON.parse(rev.images).map((img, idx) => (
+                                                    <img 
+                                                        key={idx}
+                                                        src={`${BASE_URL}/storage/${img}`} 
+                                                        alt="review"
+                                                        className="w-24 h-24 object-cover rounded-xl border border-slate-200 hover:scale-105 transition-transform cursor-zoom-in"
+                                                        onClick={() => window.open(`${BASE_URL}/storage/${img}`, '_blank')}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
 
+                    {/* Cột Thông tin bên phải */}
                     <div className="lg:col-span-4">
                         <div className="sticky top-10 space-y-6">
                             <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl">
