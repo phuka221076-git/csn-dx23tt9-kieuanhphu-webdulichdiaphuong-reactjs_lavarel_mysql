@@ -1,0 +1,199 @@
+import { useEffect, useState } from 'react';
+import { Routes, Route, Link, useParams, Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './index.css';
+import LocationDetail from './pages/LocationDetail'; 
+import AdminLayout from './layouts/AdminLayout';
+import LocationManager from './pages/admin/LocationManager';
+import UserManager from './pages/admin/UserManager'; 
+import ProvinceManager from './pages/admin/ProvinceManager';
+import Login from './pages/Login';
+import Register from './pages/Register'; 
+import ReviewManager from './pages/admin/ReviewManager';
+import { removeAccents } from './utils/stringUtils';
+
+const BASE_URL = "http://127.0.0.1:8000";
+
+// --- 1. NAVBAR ---
+function Navbar({ user, setUser }) {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null); 
+    navigate('/');
+  };
+
+  return (
+    <nav className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-8 py-3 flex justify-between items-center">
+        <Link to="/" className="text-lg font-black italic uppercase tracking-tighter text-blue-950">
+          VinaTour
+        </Link>
+        <div className="flex gap-5 items-center font-bold italic uppercase text-[9px] tracking-widest text-gray-500">
+          {user ? (
+            <>
+              <span className="text-blue-600">Hi, {user?.name}</span>
+              {user?.role === 'admin' && (
+                <Link to="/admin" className="text-red-600 bg-red-50 px-3 py-1 rounded-md">QUẢN TRỊ</Link>
+              )}
+              <button onClick={handleLogout} className="hover:text-black">Thoát</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="hover:text-blue-600">Đăng nhập</Link>
+              <Link to="/register" className="bg-blue-950 text-white px-4 py-1.5 rounded-full hover:bg-blue-800 transition-all">Đăng ký</Link>
+            </>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+// --- 2. PROTECTED ROUTE ---
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (!token || user?.role !== 'admin') {
+    alert("Quyền truy cập bị từ chối!");
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+// --- 3. TRANG CHỦ (Hàm xử lý tìm kiếm nằm ở đây) ---
+function Home({ provinces, user, setUser }) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Logic lọc dữ liệu: Tìm theo Tỉnh hoặc Địa danh bên trong tỉnh
+  const filtered = provinces.filter(p => {
+      const search = (searchTerm || "").toLowerCase().trim();
+      if (!search) return true;
+
+      // Tìm trong Tỉnh
+      const matchProvince = (p.name_search || "").includes(search) || 
+                            (p.name || "").toLowerCase().includes(search);
+
+      // Tìm trong Địa điểm (Quét trực tiếp cột name nếu name_search bị trống)
+      const matchLocation = p.locations?.some(loc => {
+          const nSearch = (loc.name_search || "").toLowerCase();
+          const nReal = (loc.name || "").toLowerCase();
+          // Dùng hàm removeAccents để gõ "ho guom" vẫn ra "Hồ Gươm"
+          const nNoAccent = removeAccents(loc.name || "").toLowerCase();
+          
+          return nSearch.includes(search) || nReal.includes(search) || nNoAccent.includes(search);
+      });
+
+      return matchProvince || matchLocation;
+  });
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar user={user} setUser={setUser} />
+      
+      <div className="bg-blue-950 pt-24 pb-10 text-center text-white border-b border-blue-900">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter shrink-0">Điểm đến</h1>
+          <div className="relative w-full max-w-md">
+            <input 
+              type="text" 
+              placeholder="Tìm tỉnh thành hoặc địa danh..." 
+              className="w-full bg-white/10 border border-white/20 px-6 py-3 rounded-full text-white outline-none focus:bg-white focus:text-gray-900 transition-all placeholder:text-white/50"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-6">
+        {filtered?.map(p => (
+          <Link to={`/province/${p?.id}`} key={p?.id} className="group">
+             <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-gray-100 relative shadow-sm">
+                <img 
+                  src={`${BASE_URL}/storage/images/provinces/${p?.image}`} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  alt={p?.name} 
+                  onError={(e) => e.target.src = 'https://via.placeholder.com/400x500?text=No+Image'}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4">
+                   <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">{p?.name}</h3>
+                   <span className="text-[10px] text-white/70 font-bold">{p.locations?.length || 0} địa danh</span>
+                </div>
+             </div>
+          </Link>
+        ))}
+      </div>
+      {filtered.length === 0 && <div className="text-center py-20 text-gray-400 font-bold uppercase italic">Không tìm thấy địa danh nào...</div>}
+    </div>
+  );
+}
+
+// --- 4. CHI TIẾT TỈNH ---
+function ProvinceDetail({ user, setUser }) {
+    const { id } = useParams();
+    const [locations, setLocations] = useState([]);
+    const [province, setProvince] = useState(null);
+
+    useEffect(() => {
+        axios.get(`${BASE_URL}/api/provinces/${id}`).then(res => setProvince(res.data));
+        axios.get(`${BASE_URL}/api/provinces/${id}/locations`).then(res => setLocations(res.data));
+    }, [id]);
+
+    return (
+        <div className="min-h-screen bg-white pt-20">
+            <Navbar user={user} setUser={setUser} />
+            <div className="px-8 py-6 border-b border-gray-50 flex justify-between items-end">
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter">{province?.name}</h2>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] pb-2">{locations.length} ĐỊA ĐIỂM</span>
+            </div>
+            <div className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+                {locations.map(l => (
+                    <Link to={`/location/${l.id}`} key={l.id} className="group">
+                        <div className="aspect-video overflow-hidden rounded-xl bg-gray-100 mb-4 shadow-sm">
+                            <img src={`${BASE_URL}/storage/images/${l.image_thumbnail}`} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" alt={l.name} />
+                        </div>
+                        <h3 className="text-xl font-black italic uppercase tracking-tight group-hover:text-blue-600">{l.name}</h3>
+                    </Link>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// --- 5. COMPONENT CHÍNH (APP) ---
+function App() {
+  const [provinces, setProvinces] = useState([]);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => { 
+    const savedUser = localStorage.getItem('user');
+    if (savedUser && savedUser !== "undefined") {
+      try { setUser(JSON.parse(savedUser)); } catch (e) { }
+    }
+    // Gọi API lấy danh sách tỉnh kèm locations
+    axios.get(`${BASE_URL}/api/provinces`).then(res => setProvinces(res.data)); 
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home provinces={provinces} user={user} setUser={setUser} />} />
+      <Route path="/login" element={<Login setUser={setUser} />} />
+      <Route path="/register" element={<Register />} /> 
+      <Route path="/province/:id" element={<ProvinceDetail user={user} setUser={setUser} />} />
+      <Route path="/location/:id" element={<LocationDetail user={user} setUser={setUser} />} />
+
+      <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+        <Route index element={<div className="p-10 font-black italic text-2xl text-gray-300">ADMIN PANEL</div>} />
+        <Route path="locations" element={<LocationManager />} />
+        <Route path="users" element={<UserManager />} />
+        <Route path="provinces" element={<ProvinceManager />} />
+        <Route path="reviews" element={<ReviewManager />} />
+      </Route>
+    </Routes>
+  );
+}
+
+// QUAN TRỌNG: Dòng này phải có để main.jsx nhận ra App
+export default App;

@@ -9,16 +9,13 @@ class Province extends Model
 {
     use HasFactory;
 
-    // THÊM DÒNG NÀY VÀO ĐÂY NÈ CON
-    protected $fillable = [
-        'name',
-        'slug',
-        'image',
-    ];
+    protected $fillable = ['name', 'slug', 'name_search', 'image'];
 
-    // Các quan hệ khác (nếu có)
+    // BỎ dòng $withCount nếu có, hoặc thêm dòng này để ép luôn lấy locations
+    protected $with = ['locations']; 
+
     public function locations()
     {
-        return $this->hasMany(Location::class);
+        return $this->hasMany(Location::class, 'province_id', 'id');
     }
 }

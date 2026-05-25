@@ -11,7 +11,7 @@ class Location extends Model
     use HasFactory;
 
     // Phải có dòng này để Seeder có thể chạy lệnh create()
-    protected $fillable = ['province_id', 'category_id', 'name', 'address', 'content', 'image_thumbnail', 'latitude', 'longitude', 'is_featured'];
+    protected $fillable = ['province_id', 'category_id', 'name','name_search', 'address', 'content', 'image_thumbnail', 'latitude', 'longitude', 'is_featured'];
 
     // THÊM ĐOẠN NÀY VÀO MODEL
     protected $casts = [
@@ -31,5 +31,9 @@ class Location extends Model
     {
         // Phải là Review::class (không có s, viết hoa R)
         return $this->hasMany(Review::class, 'location_id');
+    }
+    public function contents() 
+    {
+        return $this->hasMany(LocationContent::class, 'location_id');
     }
 }

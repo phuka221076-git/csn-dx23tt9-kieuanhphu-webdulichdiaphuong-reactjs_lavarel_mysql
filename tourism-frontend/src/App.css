@@ -182,3 +182,41 @@
     border-right-color: var(--border);
   }
 }
+
+.back-to-home {
+  /* Giữ nút cố định trên màn hình */
+  position: fixed;
+  bottom: 30px; /* Cách đáy 30px */
+  left: 30px;   /* Cách trái 30px */
+  z-index: 9999; /* Luôn nằm trên mọi nội dung khác */
+
+  /* Trang trí nút */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #007bff; /* Màu xanh (có thể đổi theo ý bạn) */
+  color: white;
+  padding: 12px 20px;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.back-to-home:hover {
+  background-color: #0056b3;
+  transform: translateY(-3px); /* Nhảy nhẹ lên khi di chuột vào */
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+
+/* Ẩn chữ trên màn hình điện thoại cho gọn */
+@media (max-width: 600px) {
+  .back-to-home .text {
+    display: none;
+  }
+  .back-to-home {
+    padding: 15px;
+    border-radius: 50%;
+  }
+}

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Review extends Model 
 {
     protected $table = 'reviews'; // Bảng trong DB vẫn là reviews
-    protected $fillable = ['location_id', 'user_id', 'rating', 'comment'];
+    protected $fillable = ['location_id', 'user_id', 'rating', 'comment', 'images'];
 
     public function location()
     {

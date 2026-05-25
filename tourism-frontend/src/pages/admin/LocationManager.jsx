@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8000';
@@ -12,6 +12,9 @@ const LocationManager = () => {
     const [pagination, setPagination] = useState({});
     const [currentPage, setCurrentPage] = useState(1);
 
+    // Mỏ neo để cuộn màn hình lên đầu
+    const topRef = useRef(null);
+
     const [formData, setFormData] = useState({
         province_id: '',
         category_id: '1',
@@ -24,7 +27,7 @@ const LocationManager = () => {
         image: null
     });
 
-    // 1. Lấy dữ liệu
+    // 1. Lấy dữ liệu (Sử dụng Interceptor đã cài ở main.jsx)
     const fetchData = async (page = 1) => {
         try {
             const resLoc = await axios.get(`${BASE_URL}/api/admin/locations?page=${page}`);
@@ -45,7 +48,16 @@ const LocationManager = () => {
         fetchData(currentPage);
     }, [currentPage]);
 
-    // 2. Tìm kiếm không dấu
+    // 2. Hàm cuộn trang mượt mà
+    const scrollToForm = () => {
+        setTimeout(() => {
+            // Ưu tiên cuộn bằng window để chắc chắn nhảy lên đầu
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Hoặc dùng ref nếu layout bị bọc bởi div overflow
+            topRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    };
+
     const removeVietnameseTones = (str) => {
         if (!str) return "";
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
@@ -55,20 +67,12 @@ const LocationManager = () => {
         removeVietnameseTones(loc.name).includes(removeVietnameseTones(searchTerm))
     );
 
-    // 3. Render ảnh chống trùng storage/
     const renderImage = (path) => {
-        // Nếu không có dữ liệu path
         if (!path) return "https://placehold.co/100x75?text=No+Image";
-        
-        // Nếu là link ảnh từ web khác
         if (path.startsWith('http')) return path;
-
-        // Vì DB chỉ lưu "tên-file.jpg", mình phải nối thêm "storage/images/" vào giữa
-        // Kết quả mong muốn: http://localhost:8000/storage/images/ha-noi-ho-hoan-kiem.jpg
         return `${BASE_URL}/storage/images/${path}`;
     };
 
-    // 4. Xử lý Input
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData({ 
@@ -77,7 +81,6 @@ const LocationManager = () => {
         });
     };
 
-    // 5. Submit Form (Đã fix lỗi Latitude/Longitude must be a number)
     const handleSubmit = async (e) => {
         e.preventDefault();
         const data = new FormData();
@@ -87,8 +90,6 @@ const LocationManager = () => {
         data.append('category_id', formData.category_id);
         data.append('address', formData.address || '');
         data.append('content', formData.content || '');
-        
-        // Ép kiểu số để Laravel không báo lỗi Validation
         data.append('latitude', formData.latitude ? parseFloat(formData.latitude) : '');
         data.append('longitude', formData.longitude ? parseFloat(formData.longitude) : '');
         data.append('is_featured', formData.is_featured);
@@ -102,21 +103,15 @@ const LocationManager = () => {
                 ? `${BASE_URL}/api/admin/locations/${editingId}` 
                 : `${BASE_URL}/api/admin/locations`;
             
-            // Nếu là Update, một số server yêu cầu giả lập PUT bằng cách thêm _method
             if (editingId) data.append('_method', 'POST'); 
 
-            await axios.post(url, data, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await axios.post(url, data); // Không cần headers thủ công vì có Interceptor
 
             alert("Ngon lành cành đào! ⚽");
             resetForm();
             fetchData(currentPage);
         } catch (err) {
-            const serverMsg = err.response?.data?.message || "Lỗi không xác định";
-            const errors = err.response?.data?.errors;
-            console.log("Chi tiết lỗi:", errors);
-            alert("Lỗi: " + serverMsg);
+            alert("Lỗi: " + (err.response?.data?.message || "Lỗi không xác định"));
         }
     };
 
@@ -143,10 +138,14 @@ const LocationManager = () => {
             image: null
         });
         setIsFormOpen(true);
+        scrollToForm(); // Gọi hàm cuộn lên khi sửa
     };
 
     return (
         <div className="p-8 bg-gray-50 min-h-screen text-slate-800">
+            {/* Đánh dấu vị trí đầu trang */}
+            <div ref={topRef} />
+
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                 <div>
@@ -155,12 +154,15 @@ const LocationManager = () => {
                 </div>
                 <div className="flex gap-3">
                     <input 
-                        className="px-5 py-3 rounded-2xl shadow-sm border-none outline-none focus:ring-2 focus:ring-blue-400 w-64 font-bold"
+                        className="px-5 py-3 rounded-2xl shadow-sm border-none outline-none focus:ring-2 focus:ring-blue-400 w-64 font-bold text-sm"
                         placeholder="Tìm tên địa điểm..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
-                    <button onClick={() => setIsFormOpen(true)} className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-slate-900 transition-all">
+                    <button 
+                        onClick={() => { setIsFormOpen(true); scrollToForm(); }} 
+                        className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-slate-900 transition-all"
+                    >
                         + Thêm mới
                     </button>
                 </div>
@@ -168,7 +170,7 @@ const LocationManager = () => {
 
             {/* Form Modal */}
             {isFormOpen && (
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-blue-50 mb-10 animate-in fade-in zoom-in duration-200">
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-blue-50 mb-10 animate-in fade-in zoom-in duration-300">
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="md:col-span-2 space-y-4">
                             <input name="name" value={formData.name} onChange={handleInputChange} placeholder="Tên địa điểm" className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all" required />
@@ -180,7 +182,9 @@ const LocationManager = () => {
                                 <input name="category_id" type="number" value={formData.category_id} onChange={handleInputChange} placeholder="Mã danh mục" className="p-4 bg-gray-50 rounded-2xl border-none font-bold outline-none" />
                             </div>
                             <input name="address" value={formData.address} onChange={handleInputChange} placeholder="Địa chỉ chi tiết" className="w-full p-4 bg-gray-50 rounded-2xl border-none font-bold outline-none" />
-                            <textarea name="content" value={formData.content} onChange={handleInputChange} placeholder="Mô tả nội dung (LongText)..." className="w-full p-4 bg-gray-50 rounded-2xl border-none h-40 font-bold outline-none" />
+                            
+                            {/* Thêm whitespace-pre-wrap cho textarea để trực quan */}
+                            <textarea name="content" value={formData.content} onChange={handleInputChange} placeholder="Mô tả nội dung..." className="w-full p-4 bg-gray-50 rounded-2xl border-none h-40 font-bold outline-none whitespace-pre-wrap" />
                         </div>
                         
                         <div className="bg-slate-50 p-6 rounded-[2rem] space-y-4 shadow-inner">
@@ -213,7 +217,7 @@ const LocationManager = () => {
                         <tr>
                             <th className="p-6">Thumbnail</th>
                             <th className="p-6">Địa danh</th>
-                            <th className="p-6">Tọa độ</th>
+                            <th className="p-6 w-1/3">Mô tả</th>
                             <th className="p-6 text-right">Thao tác</th>
                         </tr>
                     </thead>
@@ -229,12 +233,15 @@ const LocationManager = () => {
                                     />
                                 </td>
                                 <td className="p-6">
-                                    <div className="font-black text-slate-800 uppercase italic text-lg">{loc.name}</div>
-                                    <div className="text-[10px] text-gray-400 font-bold uppercase line-clamp-1">{loc.address}</div>
-                                    {loc.is_featured === 1 && <span className="inline-block mt-1 bg-yellow-400 text-[8px] font-black px-2 py-0.5 rounded-full">NỔI BẬT</span>}
+                                    <div className="font-black text-slate-800 uppercase italic text-lg leading-tight">{loc.name}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase line-clamp-1 mt-1">{loc.address}</div>
+                                    {loc.is_featured === 1 && <span className="inline-block mt-2 bg-yellow-400 text-[8px] font-black px-2 py-0.5 rounded-full">NỔI BẬT</span>}
                                 </td>
-                                <td className="p-6 font-mono text-[10px] text-gray-400">
-                                    {loc.latitude}<br/>{loc.longitude}
+                                <td className="p-6">
+                                    {/* FIX DÍNH CHỮ Ở ĐÂY: whitespace-pre-wrap giữ dòng, leading-relaxed giãn dòng */}
+                                    <div className="text-[11px] text-gray-500 font-medium whitespace-pre-wrap break-words line-clamp-3 leading-relaxed">
+                                        {loc.content}
+                                    </div>
                                 </td>
                                 <td className="p-6 text-right space-x-2">
                                     <button onClick={() => handleEdit(loc)} className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-black text-[10px] uppercase hover:bg-blue-600 hover:text-white transition-all">Sửa</button>
@@ -254,9 +261,10 @@ const LocationManager = () => {
                         onClick={() => {
                             const url = new URL(link.url);
                             setCurrentPage(Number(url.searchParams.get('page')));
+                            scrollToForm(); // Cuộn lên khi sang trang mới
                         }} 
                         disabled={!link.url || link.active}
-                        className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all ${link.active ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white text-slate-400 hover:bg-gray-100'}`}
+                        className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all ${link.active ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-400 hover:bg-gray-100'}`}
                         dangerouslySetInnerHTML={{__html: link.label}} 
                     />
                 ))}
